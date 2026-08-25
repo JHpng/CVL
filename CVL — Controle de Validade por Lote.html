@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CVL · Controle de Validade por Lote</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --verde-escuro:#064e3b;--verde:#059669;--verde-claro:#ecfdf5;
+  --amarelo:#d97706;--vermelho:#dc2626;--roxo:#7c3aed;
+  --bg:linear-gradient(135deg,#ecfdf5,#f8fafc);
+  --card:rgba(255,255,255,.96);--input:#f8fafc;--foco:#ffffff;
+  --texto:#0f172a;--texto-secundario:#475569;
+  --borda:#d1fae5;--linha:#e2e8f0;--hover:#ecfdf5;
+  --sombra:0 10px 30px rgba(0,0,0,.08);
+  --drop:#ecfdf5;--drop-hot:#d1fae5;--menu:#ffffff;
+}
+body.dark{
+  --verde-escuro:#065f46;--verde:#10b981;--verde-claro:#0f2b23;
+  --amarelo:#f59e0b;--vermelho:#f87171;--roxo:#a78bfa;
+  --bg:linear-gradient(135deg,#0b1220,#111827);
+  --card:rgba(23,31,45,.96);--input:#0f172a;--foco:#0b1220;
+  --texto:#e5e7eb;--texto-secundario:#94a3b8;
+  --borda:#1f3d34;--linha:#243044;--hover:#16241f;
+  --sombra:0 10px 30px rgba(0,0,0,.45);
+  --drop:#0f2b23;--drop-hot:#16241f;--menu:#111827;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);background-attachment:fixed;color:var(--texto);min-height:100vh;
+  transition:background .25s,color .25s}
+header{background:linear-gradient(135deg,var(--verde-escuro),var(--verde));color:#fff;
+  padding:15px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;box-shadow:var(--sombra)}
+header h1{font-size:19px;font-weight:700}
+header .sp{flex:1}
+header input,header select{padding:7px 10px;border:0;border-radius:8px;font-size:13px;background:var(--input);color:var(--texto)}
+header label{color:#a7f3d0!important}
+#b_tema{display:inline-flex;align-items:center;gap:9px;
+  background:rgba(255,255,255,.13);border:1.5px solid rgba(255,255,255,.35);
+  color:#fff;font:600 13.5px/1 inherit;font-family:inherit;
+  padding:11px 19px;border-radius:999px;cursor:pointer;transition:.18s;white-space:nowrap}
+#b_tema:hover{background:rgba(255,255,255,.24);border-color:rgba(255,255,255,.6)}
+body.dark #b_tema{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22)}
+#b_tema i{font-style:normal;font-size:16px;line-height:1}
+@media(max-width:680px){#b_tema span{display:none}#b_tema{padding:11px 13px}}
+nav{background:var(--verde-escuro);display:flex;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+nav button{background:none;border:0;color:#a7f3d0;padding:13px 20px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:3px solid transparent;transition:.15s}
+nav button:hover{color:#fff;background:rgba(255,255,255,.07)}
+nav button.on{color:#fff;border-bottom-color:var(--amarelo);background:rgba(0,0,0,.18)}
+main{padding:20px;max-width:1600px;margin:0 auto}
+.pane{display:none}.pane.on{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:19px;margin-bottom:17px;box-shadow:var(--sombra);backdrop-filter:blur(6px)}
+.card h2{font-size:15px;color:var(--verde-escuro);margin-bottom:14px;border-bottom:2px solid var(--borda);padding-bottom:9px;font-weight:700}
+body.dark .card h2{color:#6ee7b7}
+label{display:block;font-size:11px;font-weight:700;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--linha);border-radius:9px;font-size:14px;font-family:inherit;background:var(--input);color:var(--texto);transition:.15s}
+input:focus,select:focus{outline:0;border-color:var(--verde);box-shadow:0 0 0 3px rgba(5,150,105,.18);background:var(--foco)}
+#l_cb{font-size:17px;font-weight:700;letter-spacing:1px;border:2px solid var(--verde);background:var(--verde-claro)}
+#l_cb:focus{box-shadow:0 0 0 4px rgba(5,150,105,.25)}
+body.dark #l_cb{background:#0f2b23}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(175px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+button.act{background:linear-gradient(135deg,var(--verde-escuro),var(--verde));color:#fff;border:0;padding:11px 20px;border-radius:9px;font-weight:600;font-size:14px;cursor:pointer;transition:.15s;box-shadow:0 3px 10px rgba(5,150,105,.22)}
+button.act:hover{filter:brightness(1.09);transform:translateY(-1px)}
+button.gh{background:var(--card);color:var(--verde-escuro);border:1.5px solid var(--verde);box-shadow:none}
+button.gh:hover{background:var(--hover);filter:none}
+body.dark button.gh{background:#111827;color:#6ee7b7}
+body.dark button.gh:hover{background:#16241f}
+button.dg{background:var(--card);color:var(--vermelho);border:1.5px solid var(--vermelho);box-shadow:none}
+button.dg:hover{background:#fef2f2;filter:none}
+body.dark button.dg{background:#111827}
+body.dark button.dg:hover{background:#2a1517}
+button.mini{background:none;border:0;cursor:pointer;font-size:15px;padding:2px 5px;line-height:1}
+.row{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--verde-escuro);color:#fff;padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;z-index:2}
+th.srt{cursor:pointer;user-select:none}
+th.srt:hover{filter:brightness(1.25)}
+th.srt::after{content:'';opacity:.45;font-size:9px;margin-left:5px}
+th.srt[data-dir="1"]::after{content:'▲';opacity:1}
+th.srt[data-dir="-1"]::after{content:'▼';opacity:1}
+td{padding:8px;border-bottom:1px solid var(--linha)}
+tbody tr:hover{background:var(--hover)}
+tfoot td{background:var(--verde-claro);font-weight:700;color:var(--verde-escuro);border-top:2px solid var(--verde);border-bottom:0;font-size:12.5px}
+body.dark tfoot td{color:#6ee7b7}
+.wrap{max-height:480px;overflow:auto;border:1px solid var(--borda);border-radius:11px}
+.tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+.t1{background:var(--vermelho)}.t2{background:var(--amarelo)}.t3{background:#ca8a04}
+.t4{background:var(--texto-secundario)}.t5{background:var(--verde)}
+body.dark .t1,body.dark .t2,body.dark .t3{color:#1a1005}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px}
+.kpi{background:var(--card);border:1px solid var(--borda);border-left:5px solid var(--verde);border-radius:13px;padding:15px;box-shadow:var(--sombra);transition:.15s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi b{display:block;font-size:11px;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.kpi s{display:block;font-size:28px;font-weight:800;text-decoration:none;color:var(--verde-escuro);line-height:1.1}
+.kpi i{font-size:11px;color:var(--texto-secundario);font-style:normal}
+.k1{border-left-color:var(--vermelho)}.k1 s{color:var(--vermelho)}
+.k2{border-left-color:var(--amarelo)}.k2 s{color:var(--amarelo)}
+.k3{border-left-color:#ca8a04}.k3 s{color:#a16207}
+body.dark .k3 s{color:#fbbf24}
+.k5{border-left-color:var(--verde)}.k5 s{color:var(--verde)}
+.k0{border-left-color:var(--roxo)}.k0 s{color:var(--roxo)}
+.msg{padding:11px 15px;border-radius:9px;margin-bottom:13px;font-size:13px;display:none}
+.ok{background:var(--verde-claro);color:#065f46;border:1px solid var(--borda)}
+.er{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+body.dark .ok{color:#6ee7b7}
+body.dark .er{background:#2a1517;color:#fca5a5;border-color:#7f1d1d}
+.hint{font-size:12px;color:var(--texto-secundario);margin-top:6px}
+.pill{background:var(--verde-claro);border:1px solid var(--borda);padding:6px 13px;border-radius:16px;font-size:12px;font-weight:600;color:var(--verde-escuro)}
+body.dark .pill{color:#6ee7b7}
+.mut{color:var(--texto-secundario);font-style:italic;text-align:center;padding:26px}
+.fefo{color:var(--vermelho);font-weight:700;font-size:11px}
+.bloq{color:#fff;background:var(--vermelho);padding:3px 9px;border-radius:12px;
+  font-weight:800;font-size:10.5px;letter-spacing:.4px;white-space:nowrap}
+body.dark .bloq{color:#1a1005}
+.hoje{color:var(--roxo);font-weight:700}
+.drop{border:2px dashed var(--verde);border-radius:13px;padding:30px;text-align:center;background:var(--drop);cursor:pointer;transition:.18s}
+.drop:hover,.drop.hot{background:var(--drop-hot);border-color:var(--verde-escuro)}
+.drop b{color:var(--verde-escuro);font-size:15px}
+body.dark .drop b{color:#6ee7b7}
+body.dark .drop:hover,body.dark .drop.hot{border-color:#6ee7b7}
+.ac{position:relative}
+.ac ul{position:absolute;z-index:50;left:0;right:0;top:100%;background:var(--menu);border:1px solid var(--borda);border-radius:0 0 11px 11px;max-height:240px;overflow:auto;list-style:none;box-shadow:var(--sombra)}
+.ac li{padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--linha)}
+.ac li:hover,.ac li.sel{background:var(--hover)}
+.ac li s{display:block;text-decoration:none;font-size:11px;color:var(--texto-secundario)}
+.bar{height:8px;background:var(--linha);border-radius:5px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--verde),var(--verde-escuro));transition:width .25s}
+.rodape{margin-top:34px;padding:26px 20px 30px;
+  background:linear-gradient(180deg,var(--verde-escuro),var(--verde));
+  border-top:1px solid rgba(255,255,255,.14);text-align:center;font-size:12.5px;
+  line-height:2;color:#d1fae5;user-select:none;pointer-events:none}
+@media print{
+  header,nav,.noprint,.rodape,#b_tema{display:none!important}
+  body,body.dark{background:#fff!important;color:#000!important}
+  body.dark{--card:#fff;--texto:#000;--texto-secundario:#333;--linha:#ccc;--verde-claro:#ecfdf5}
+  main{padding:0;max-width:none}
+  .card{border:0;box-shadow:none;padding:0;background:#fff;backdrop-filter:none}
+  .card h2,body.dark .card h2{color:#064e3b}
+  .wrap{max-height:none;overflow:visible;border:0}
+  th{background:#064e3b!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  th.srt::after{display:none}
+  .tag,.bloq{border:1px solid #999;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tfoot td{background:#ecfdf5!important;color:#064e3b!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table{font-size:10.5px}td{padding:4px 5px}tr{page-break-inside:avoid}
+  @page{size:A4 portrait;margin:10mm}
+}
+.psig{display:none}
+@media print{.psig{display:block;margin-top:24px;font-size:11px;color:#333}}
+</style>
+</head>
+<body>
+<header>
+  <h1>CVL · Controle de Validade por Lote</h1><div class="sp"></div>
+  <button id="b_tema" type="button" aria-label="Alternar tema"><i>🌙</i><span>Mudar para tema escuro</span></button>
+  <div><label>Referência</label><input type="date" id="dref" /></div>
+  <div><label>Filial</label><select id="loja"></select></div>
+</header>
+
+<nav>
+  <button class="on" data-p="p1">1 · Entrada</button>
+  <button data-p="p2">2 · Dashboard &amp; Busca</button>
+  <button data-p="p3">3 · Base Mestra</button>
+  <button data-p="p4">4 · Impressão</button>
+</nav>
+
+<main>
+
+<!-- 1 ENTRADA -->
+<section class="pane on" id="p1">
+  <div class="card">
+    <h2>Lançar lote</h2>
+    <div class="msg" id="m1"></div>
+    <div><label>Bipar código de barras (opcional)</label>
+      <input id="l_cb" autocomplete="off" placeholder="Aponte o leitor e bipe, ou digite e dê Enter"></div>
+    <div class="hint">O código de barras é um atalho. Você pode ignorá-lo e digitar o SKU ou a descrição abaixo.</div>
+    <div class="grid g3" style="margin-top:14px">
+      <div class="ac"><label>SKU ou descrição</label><input id="l_sku" autocomplete="off" placeholder="Digite para buscar..."></div>
+      <div><label>Lote</label><input id="l_lote" placeholder="Ex.: L2026-04"></div>
+      <div><label>Validade</label><input type="date" id="l_val"></div>
+      <div><label>Quantidade</label><input type="number" id="l_qtd" min="0" step="1"></div>
+      <div><label>Filial</label><select id="l_loja"></select></div>
+      <div><label>Local / endereço</label><input id="l_loc" placeholder="Opcional"></div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="act" id="b_lote">Adicionar lote</button>
+      <button class="act gh" id="b_limpa">Limpar campos</button>
+    </div>
+    <div class="hint" id="l_info"></div>
+  </div>
+
+  <div class="card">
+    <h2>Lotes lançados <span class="pill" id="p_lotes">0</span></h2>
+    <div class="row noprint" style="margin-bottom:12px">
+      <div style="max-width:190px"><label>Lançados em</label>
+        <select id="h_per"><option value="">Todo o período</option><option value="hoje">Hoje</option>
+        <option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select></div>
+      <div style="flex:1;min-width:200px"><label>Buscar</label><input id="h_q" placeholder="SKU, descrição, lote ou local"></div>
+      <button class="act gh" id="b_json">Backup JSON</button>
+      <button class="act gh" id="b_rest">Restaurar JSON</button>
+      <button class="act gh" id="b_csv">Exportar lotes (CSV)</button>
+      <button class="act dg" id="b_zap">Apagar lotes</button>
+      <input type="file" id="fjson" accept=".json" style="display:none">
+    </div>
+    <div class="wrap"><table id="t_lotes">
+      <thead><tr>
+        <th class="srt" data-k="sku">SKU</th><th class="srt" data-k="desc">Descrição</th>
+        <th class="srt" data-k="lote">Lote</th><th class="srt" data-k="val">Validade</th>
+        <th class="srt" data-k="d">Dias</th><th class="srt" data-k="qtd">Qtd</th>
+        <th class="srt" data-k="loja">Filial</th><th class="srt" data-k="loc">Local</th>
+        <th class="srt" data-k="s">Status</th><th class="srt" data-k="dt">Lançado em</th><th></th>
+      </tr></thead>
+      <tbody></tbody>
+      <tfoot></tfoot></table></div>
+  </div>
+</section>
+
+<!-- 2 DASHBOARD + BUSCA -->
+<section class="pane" id="p2">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card" style="margin-top:17px">
+    <h2>Consulta rápida por produto</h2>
+    <div class="ac"><label>SKU, descrição ou código de barras</label><input id="q_sku" autocomplete="off" placeholder="Digite ou bipe..."></div>
+    <div id="q_out" style="margin-top:16px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Prioridade FEFO</h2>
+    <div class="row noprint" style="margin-bottom:12px">
+      <div style="max-width:200px"><label>Status</label>
+        <select id="f_st"><option value="">Todos</option><option value="1">Vencido</option>
+        <option value="2">Crítico ≤30d</option><option value="3">Alerta ≤90d</option>
+        <option value="4">Atenção ≤180d</option><option value="5">OK</option></select></div>
+      <div style="max-width:200px"><label>Filial</label><select id="f_lj"></select></div>
+      <div style="flex:1;min-width:200px"><label>Buscar</label><input id="f_q" placeholder="SKU, descrição ou lote"></div>
+    </div>
+    <div class="wrap"><table id="t_dash">
+      <thead><tr><th>#</th><th>SKU</th><th>Descrição</th><th>Marca</th><th>Lote</th>
+      <th>Validade</th><th>Dias</th><th>Qtd</th><th>Filial</th><th>Status</th><th>Ação</th></tr></thead>
+      <tbody></tbody>
+      <tfoot></tfoot></table></div>
+    <div class="hint"><b>RETIRAR</b> = lote vencido, tirar de circulação. &nbsp;
+      <b>SAIR 1º</b> = primeiro a vencer entre os lotes válidos do SKU.</div>
+  </div>
+</section>
+
+<!-- 3 BASE MESTRA -->
+<section class="pane" id="p3">
+  <div class="card">
+    <h2>Importar base (XLSX / CSV)</h2>
+    <div class="msg" id="m0"></div>
+    <div class="drop" id="drop">
+      <b>Clique aqui ou arraste o arquivo</b>
+      <div class="hint">SKU / CÓDIGO · DESCRIÇÃO · MARCA · Estoque F1 · F2 · F3 · FORALINHA · COD. BARRAS (opcional)</div>
+    </div>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" style="display:none">
+    <div class="row" style="margin-top:13px">
+      <div style="max-width:230px"><label>Modo</label>
+        <select id="i_mode"><option value="merge">Mesclar / atualizar</option><option value="repl">Substituir base</option></select></div>
+      <div class="pill" id="p_base">Base: 0 itens</div>
+      <div class="pill" id="p_cb">Códigos de barras: —</div>
+      <div class="pill" id="p_mem">Armazenamento: —</div>
+    </div>
+    <div class="hint">Exporte o arquivo do Winthor e envie <b>sem abrir no Excel</b> — abrir e salvar pode converter o código de barras em notação científica.</div>
+  </div>
+
+  <div class="card">
+    <h2>Cadastro manual</h2>
+    <div class="msg" id="m3"></div>
+    <div class="grid g3">
+      <div><label>SKU</label><input id="c_sku"></div>
+      <div><label>Descrição</label><input id="c_desc"></div>
+      <div><label>Marca</label><input id="c_mc"></div>
+      <div><label>Código(s) de barras</label><input id="c_cb" placeholder="Separe vários com ;"></div>
+      <div><label>Fora de linha</label><select id="c_fl"><option value="N">Não</option><option value="S">Sim</option></select></div>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="act" id="b_cad">Salvar produto</button></div>
+    <div class="hint">Use este cadastro para vincular um código bipado que não veio na planilha.</div>
+  </div>
+
+  <div class="card">
+    <h2>Base mestra <span class="pill" id="p_base2">0</span></h2>
+    <div class="row noprint" style="margin-bottom:12px">
+      <div style="flex:1;min-width:220px"><label>Buscar</label><input id="b_q" placeholder="SKU, descrição, marca ou código de barras"></div>
+    </div>
+    <div class="wrap"><table id="t_base">
+      <thead><tr><th>SKU</th><th>Descrição</th><th>Marca</th><th>Cód. barras</th><th>F1</th><th>F2</th><th>F3</th>
+      <th>F.linha</th><th>Lotes</th><th></th></tr></thead>
+      <tbody></tbody></table></div>
+    <div class="hint" id="h_base"></div>
+    <div class="row noprint" style="margin-top:14px">
+      <button class="act gh" id="b_expbase">Exportar base (CSV)</button>
+      <button class="act gh" id="b_expxls">Exportar base (XLSX)</button>
+      <button class="act dg" id="b_zapbase">Apagar base</button>
+    </div>
+    <div class="hint">A exportação usa o filtro de busca acima quando preenchido.</div>
+  </div>
+</section>
+
+<!-- 4 IMPRESSÃO -->
+<section class="pane" id="p4">
+  <div class="card noprint">
+    <h2>Relatório para impressão</h2>
+    <div class="grid g2">
+      <div><label>Escopo</label><select id="r_st">
+        <option value="risco">Somente em risco (≤90d e vencidos)</option>
+        <option value="">Todos os lotes</option>
+        <option value="1">Vencidos</option><option value="2">Críticos ≤30d</option></select></div>
+      <div><label>Filial</label><select id="r_lj"></select></div>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="act" onclick="window.print()">Imprimir</button></div>
+  </div>
+  <div class="card">
+    <h2 id="r_tit">Relatório CVL</h2>
+    <div class="wrap"><table id="t_rel">
+      <thead><tr><th>SKU</th><th>Descrição</th><th>Lote</th><th>Validade</th>
+      <th>Dias</th><th>Qtd</th><th>Filial</th><th>Local</th><th>Status</th><th>Ação</th><th>Visto</th></tr></thead>
+      <tbody></tbody>
+      <tfoot></tfoot></table></div>
+    <div class="psig">Conferido por: ______________________________ &nbsp;&nbsp; Data: ____/____/______</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="rodape">
+  <div id="fl1"></div><div id="fl2"></div><div id="fl3"></div>
+</footer>
+
+<script>
+const APP={nome:'CVL',desc:'Controle de Validade por Lote',ver:'1.0.12',
+  rev:'12ª revisão',autor:'Jean Henrique — Controle de Validade por Lote',
+  reg:'REG15428-JH',build:'2026.08.23',ano:2026};
+
+const KB='cvl_base_v4',KL='cvl_lotes_v4',KT='cvl_tema';
+const LOJAS=['Matriz','Filial 2','Filial 3'];
+const LIM={c:30,a:90,t:180};
+let base=[],lotes=[],idx=new Map(),idxCB=new Map(),seq=1;
+let ord={k:'d',dir:1};
+
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dbr=s=>s?String(s).split('-').reverse().join('/'):'—';
+const NUM=v=>{const n=parseFloat(String(v??'').replace(/\./g,'').replace(',','.'));return isNaN(n)?0:n};
+const INT=n=>Number(n||0).toLocaleString('pt-BR');
+const hoje=()=>new Date().toISOString().slice(0,10);
+const flash=(el,t,ok=true)=>{el.textContent=t;el.className='msg '+(ok?'ok':'er');
+  el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',7000)};
+
+/* ---------- tema ---------- */
+function tema(d){
+  document.body.classList.toggle('dark',d);
+  const b=$('b_tema'),t=d?'Mudar para tema claro':'Mudar para tema escuro';
+  b.querySelector('i').textContent=d?'☀️':'🌙';
+  b.querySelector('span').textContent=t;
+  b.setAttribute('aria-label',t);
+  try{localStorage.setItem(KT,d?'1':'0')}catch(e){}
+}
+
+/* ---------- código de barras ---------- */
+function nCB(v){
+  let s=String(v??'').trim();
+  if(!s)return '';
+  if(/^\d(\.\d+)?[eE]\+?\d+$/.test(s)){
+    const n=Number(s);
+    if(isFinite(n))s=n.toLocaleString('fullwide',{useGrouping:false});
+  }
+  s=s.replace(/[\s.\-]/g,'').toUpperCase();
+  return /^\d+$/.test(s)?s.replace(/^0+(?=\d)/,''):s;
+}
+const chavesCB=b=>String(b.cb||'').split(/[;,/|]+/).map(nCB).filter(Boolean);
+function porCB(cod){
+  const c=nCB(cod);
+  if(!c)return null;
+  return idxCB.get(c)
+    ||(c.length===13?idxCB.get(c.slice(0,12)):null)
+    ||(c.length===14?idxCB.get(c.slice(1,13)):null)
+    ||(c.length===12?idxCB.get(nCB('0'+c)):null)
+    ||null;
+}
+const temCB=()=>base.filter(b=>chavesCB(b).length).length;
+
+/* ---------- IndexedDB ---------- */
+const DB_NOME='cvl_db',DB_STORE='kv';
+let _db=null;
+function db(){
+  if(!('indexedDB'in window))return Promise.reject(new Error('IndexedDB indisponível'));
+  return _db||(_db=new Promise((ok,err)=>{
+    const r=indexedDB.open(DB_NOME,1);
+    r.onupgradeneeded=()=>{const d=r.result;
+      if(!d.objectStoreNames.contains(DB_STORE))d.createObjectStore(DB_STORE)};
+    r.onsuccess=()=>ok(r.result);
+    r.onerror=()=>err(r.error);
+  }));
+}
+async function idbSet(k,v){
+  const d=await db();
+  return new Promise((ok,err)=>{
+    const t=d.transaction(DB_STORE,'readwrite');
+    t.objectStore(DB_STORE).put(v,k);
+    t.oncomplete=()=>ok(true);
+    t.onerror=()=>err(t.error);
+    t.onabort=()=>err(t.error||new Error('Transação abortada'));
+  });
+}
+async function idbGet(k){
+  const d=await db();
+  return new Promise((ok,err)=>{
+    const t=d.transaction(DB_STORE,'readonly');
+    const q=t.objectStore(DB_STORE).get(k);
+    q.onsuccess=()=>ok(q.result);
+    q.onerror=()=>err(q.error);
+  });
+}
+
+/* ---------- persistência ---------- */
+const B_COLS=['sku','desc','mc','f1','f2','f3','fl','cb'];
+const L_COLS=['id','sku','lote','val','qtd','loja','loc','dt'];
+const NUMS=['f1','f2','f3','qtd'];
+const pack=(arr,cols)=>arr.map(o=>cols.map(c=>{
+  const v=o[c];return v===undefined||v===null||v===''||v===0?0:v}));
+const unpack=(arr,cols)=>arr.map(r=>{const o={};
+  cols.forEach((c,i)=>o[c]=r[i]===0?(NUMS.includes(c)?0:''):(r[i]??''));
+  return o});
+
+/* gravação assíncrona com fila: nunca perde a última versão */
+function criaSaver(chave,getArr,cols,alvo,legado){
+  let pend=false,rodando=false;
+  return function(){
+    pend=true;
+    if(rodando)return true;
+    rodando=true;
+    (async()=>{
+      while(pend){
+        pend=false;
+        try{
+          await idbSet(chave,pack(getArr(),cols));
+          try{localStorage.removeItem(legado)}catch(e){}
+        }catch(e){
+          flash($(alvo),`Não foi possível gravar ${chave} (${e.name||'erro'}: ${e.message||''}). `
+            +`Faça Backup JSON — os dados em tela seguem válidos até recarregar a página.`,false);
+          pend=false;
+        }
+      }
+      rodando=false;
+      mostraMem();
+    })();
+    return true;
+  };
+}
+const saveBase=criaSaver('base',()=>base,B_COLS,'m0',KB);
+const saveLotes=criaSaver('lotes',()=>lotes,L_COLS,'m1',KL);
+
+function normaliza(){
+  base.forEach(b=>{b.f1=NUM(b.f1);b.f2=NUM(b.f2);b.f3=NUM(b.f3);
+    b.fl=b.fl==='S'?'S':'N';b.cb=b.cb||''});
+  lotes.forEach(l=>{l.qtd=NUM(l.qtd);l.id=NUM(l.id)||seq++;if(!l.dt)l.dt=''});
+  seq=Math.max(seq,...lotes.map(l=>+l.id||0))+1;
+  reidx();
+}
+
+async function load(){
+  let migrou=false;
+  /* base */
+  let rb=null;
+  try{rb=await idbGet('base')}catch(e){rb=null}
+  if(!rb){
+    try{rb=JSON.parse(localStorage.getItem(KB))||null}catch(e){rb=null}
+    if(rb)migrou=true;
+  }
+  base=rb?(Array.isArray(rb[0])?unpack(rb,B_COLS):rb):[];
+  /* lotes */
+  let rl=null;
+  try{rl=await idbGet('lotes')}catch(e){rl=null}
+  if(!rl){
+    try{rl=JSON.parse(localStorage.getItem(KL))||null}catch(e){rl=null}
+    if(rl)migrou=true;
+  }
+  lotes=rl?(Array.isArray(rl[0])?unpack(rl,L_COLS):rl):[];
+  normaliza();
+  if(migrou){
+    saveBase();saveLotes();
+    flash($('m0'),`Dados migrados para o armazenamento de alta capacidade `
+      +`(IndexedDB): ${base.length} produtos e ${lotes.length} lotes. `
+      +`O limite de 5 MB do modo antigo não se aplica mais.`);
+  }
+}
+
+function reidx(){
+  idx=new Map();idxCB=new Map();
+  base.forEach(b=>{
+    idx.set(String(b.sku).toUpperCase(),b);
+    chavesCB(b).forEach(c=>{
+      if(!idxCB.has(c))idxCB.set(c,b);
+      if(c.length===14&&!idxCB.has(c.slice(1,13)))idxCB.set(c.slice(1,13),b);
+    });
+  });
+}
+const prod=s=>idx.get(String(s).toUpperCase());
+
+/* ---------- indicador de espaço real ---------- */
+async function mostraMem(){
+  const el=$('p_mem');if(!el)return;
+  if(!navigator.storage||!navigator.storage.estimate){
+    el.textContent='Armazenamento: IndexedDB ativo';el.style.color='';return;
+  }
+  try{
+    const {usage=0,quota=0}=await navigator.storage.estimate();
+    const mb=usage/1048576,qmb=quota/1048576;
+    const disp=qmb>=1024?`${(qmb/1024).toFixed(1)} GB`:`${qmb.toFixed(0)} MB`;
+    el.textContent=`Armazenamento: ${mb.toFixed(1)} MB de ${disp}`
+      +(navigator.storage.persisted&&el._p?' · persistente':'');
+    el.style.color=quota&&usage/quota>.85?'var(--vermelho)':'';
+  }catch(e){el.textContent='Armazenamento: IndexedDB ativo';el.style.color=''}
+}
+
+/* ---------- datas / status ---------- */
+function ref(){return $('dref').value||hoje()}
+function dias(val){if(!val)return 9999;
+  const a=new Date(ref()+'T00:00:00'),b=new Date(val+'T00:00:00');
+  return Math.round((b-a)/86400000)}
+function stat(d){if(d<0)return 1;if(d<=LIM.c)return 2;if(d<=LIM.a)return 3;if(d<=LIM.t)return 4;return 5}
+const SN=['','Vencido','Crítico','Alerta','Atenção','OK'];
+const tag=s=>`<span class="tag t${s}">${SN[s]}</span>`;
+function idade(dt){if(!dt)return 9999;
+  return Math.round((new Date(hoje()+'T00:00:00')-new Date(dt+'T00:00:00'))/86400000)}
+
+/* célula de ação: vencido = retirar; senão FEFO */
+const acao=l=>l.s===1
+  ?'<span class="bloq" title="Vencido — tirar de circulação">RETIRAR</span>'
+  :(l.fefo?'<span class="fefo" title="Primeiro a vencer entre os lotes válidos">SAIR 1º</span>':'');
+
+function calc(){
+  const L=lotes.map(l=>{const p=prod(l.sku)||{},d=dias(l.val);
+    return{...l,desc:p.desc||'(fora da base)',mc:p.mc||'',d,s:stat(d)}});
+  const mn={};
+  L.forEach(l=>{if(l.d<0)return;                      // vencido não entra no FEFO
+    const k=String(l.sku).toUpperCase();
+    if(mn[k]===undefined||l.d<mn[k])mn[k]=l.d});
+  L.forEach(l=>l.fefo=l.d>=0&&l.d===mn[String(l.sku).toUpperCase()]);
+  return L.sort((a,b)=>a.d-b.d);
+}
+function ordena(L){
+  const k=ord.k,dir=ord.dir;
+  return L.slice().sort((a,b)=>{
+    const x=a[k],y=b[k];
+    if(typeof x==='number'||typeof y==='number')return((+x||0)-(+y||0))*dir;
+    return String(x??'').localeCompare(String(y??''),'pt-BR')*dir});
+}
+function totais(L){
+  const un=L.reduce((a,b)=>a+(+b.qtd||0),0);
+  const skus=new Set(L.map(l=>String(l.sku).toUpperCase())).size;
+  return{n:L.length,un,skus};
+}
+function baseFiltrada(){
+  const q=$('b_q').value.trim().toLowerCase();
+  return base.filter(b=>!q||[b.sku,b.desc,b.mc,b.cb].join(' ').toLowerCase().includes(q));
+}
+
+/* ---------- render ---------- */
+function render(){
+  const L=calc();
+  $('p_base').textContent=`Base: ${INT(base.length)} itens`;
+  $('p_base2').textContent=INT(base.length);
+  const nc=temCB();
+  $('p_cb').textContent=`Códigos de barras: ${INT(nc)} de ${INT(base.length)}`;
+  $('p_cb').style.color=base.length&&!nc?'var(--vermelho)':'';
+
+  /* ---- aba 1: histórico ---- */
+  const per=$('h_per').value,hq=$('h_q').value.trim().toLowerCase();
+  let H=L.filter(l=>{
+    if(per==='hoje'&&l.dt!==hoje())return false;
+    if(per==='7'&&idade(l.dt)>7)return false;
+    if(per==='30'&&idade(l.dt)>30)return false;
+    return !hq||[l.sku,l.desc,l.lote,l.loc].join(' ').toLowerCase().includes(hq)});
+  H=ordena(H);
+  $('p_lotes').textContent=H.length===L.length?INT(L.length):`${INT(H.length)} de ${INT(L.length)}`;
+
+  document.querySelectorAll('#t_lotes th.srt').forEach(th=>
+    th.dataset.dir=th.dataset.k===ord.k?ord.dir:'');
+
+  const tb=$('t_lotes').tBodies[0];
+  tb.innerHTML=H.length?H.map(l=>`<tr>
+    <td><b>${esc(l.sku)}</b></td><td>${esc(l.desc)}</td><td>${esc(l.lote)}</td>
+    <td>${dbr(l.val)}</td><td>${l.d>9000?'—':l.d}</td><td>${INT(l.qtd)}</td>
+    <td>${esc(l.loja)}</td><td>${esc(l.loc||'—')}</td><td>${tag(l.s)}</td>
+    <td class="${l.dt===hoje()?'hoje':''}">${l.dt?dbr(l.dt)+(l.dt===hoje()?' · hoje':''):'—'}</td>
+    <td class="noprint"><button class="mini" data-del="${l.id}" title="Excluir">🗑</button></td></tr>`).join('')
+    :'<tr><td colspan="11" class="mut">Nenhum lote encontrado.</td></tr>';
+  const tH=totais(H);
+  $('t_lotes').tFoot.innerHTML=H.length?`<tr>
+    <td colspan="5">${INT(tH.n)} lote(s) · ${INT(tH.skus)} SKU(s) distintos</td>
+    <td>${INT(tH.un)}</td><td colspan="5">unidades no total</td></tr>`:'';
+  tb.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    lotes=lotes.filter(x=>String(x.id)!==b.dataset.del);
+    saveLotes();render();flash($('m1'),'Lote excluído.')});
+
+  /* ---- aba 2: KPIs ---- */
+  const q=s=>L.filter(l=>l.s===s),sq=s=>q(s).reduce((a,b)=>a+(+b.qtd||0),0);
+  const risco=q(1).length+q(2).length+q(3).length;
+  const novos=L.filter(l=>l.dt===hoje()).length;
+  $('kpis').innerHTML=`
+   <div class="kpi k1"><b>Vencido</b><s>${q(1).length}</s><i>${INT(sq(1))} un</i></div>
+   <div class="kpi k2"><b>Crítico ≤30d</b><s>${q(2).length}</s><i>${INT(sq(2))} un</i></div>
+   <div class="kpi k3"><b>Alerta ≤90d</b><s>${q(3).length}</s><i>${INT(sq(3))} un</i></div>
+   <div class="kpi k5"><b>Prazo OK</b><s>${q(4).length+q(5).length}</s><i>${INT(sq(4)+sq(5))} un</i></div>
+   <div class="kpi k0"><b>Lotes em risco</b><s>${risco}</s>
+     <i>de ${L.length} · ${L.length?(risco/L.length*100).toFixed(0):0}% · ${novos} lançado(s) hoje</i>
+     <div class="bar"><i style="width:${L.length?risco/L.length*100:0}%"></i></div></div>`;
+
+  /* ---- aba 2: FEFO ---- */
+  const fs=$('f_st').value,fl=$('f_lj').value,fq=$('f_q').value.trim().toLowerCase();
+  const D=L.filter(l=>(!fs||String(l.s)===fs)&&(!fl||l.loja===fl)&&
+    (!fq||[l.sku,l.desc,l.lote].join(' ').toLowerCase().includes(fq)));
+  $('t_dash').tBodies[0].innerHTML=D.length?D.map((l,i)=>`<tr>
+    <td>${i+1}</td><td><b>${esc(l.sku)}</b></td><td>${esc(l.desc)}</td><td>${esc(l.mc)}</td>
+    <td>${esc(l.lote)}</td><td>${dbr(l.val)}</td><td>${l.d>9000?'—':l.d}</td>
+    <td>${INT(l.qtd)}</td><td>${esc(l.loja)}</td><td>${tag(l.s)}</td>
+    <td>${acao(l)}</td></tr>`).join('')
+    :'<tr><td colspan="11" class="mut">Nada encontrado.</td></tr>';
+  const tD=totais(D);
+  $('t_dash').tFoot.innerHTML=D.length?`<tr>
+    <td colspan="7">${INT(tD.n)} lote(s) · ${INT(tD.skus)} SKU(s) distintos</td>
+    <td>${INT(tD.un)}</td><td colspan="3">unidades</td></tr>`:'';
+
+  /* ---- aba 3: base ---- */
+  const BF=baseFiltrada(),B=BF.slice(0,500);
+  $('t_base').tBodies[0].innerHTML=B.length?B.map(b=>{
+    const n=lotes.filter(l=>String(l.sku).toUpperCase()===String(b.sku).toUpperCase()).length;
+    return `<tr><td><b>${esc(b.sku)}</b></td><td>${esc(b.desc)}</td><td>${esc(b.mc||'—')}</td>
+    <td>${esc(b.cb||'—')}</td>
+    <td>${INT(b.f1)}</td><td>${INT(b.f2)}</td><td>${INT(b.f3)}</td>
+    <td>${b.fl==='S'?'Sim':'—'}</td><td>${n}</td>
+    <td class="noprint"><button class="mini" data-ed="${esc(b.sku)}" title="Editar">✏️</button>
+    <button class="mini" data-rm="${esc(b.sku)}" title="Excluir">🗑</button></td></tr>`}).join('')
+    :'<tr><td colspan="10" class="mut">Base vazia.</td></tr>';
+  $('h_base').textContent=BF.length>500
+    ?`Exibindo os 500 primeiros de ${INT(BF.length)} resultados — refine a busca para ver os demais.`:'';
+  $('t_base').tBodies[0].querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editP(b.dataset.ed));
+  $('t_base').tBodies[0].querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+    base=base.filter(x=>String(x.sku).toUpperCase()!==b.dataset.rm.toUpperCase());
+    reidx();saveBase();render();flash($('m3'),'Produto removido.')});
+
+  /* ---- aba 4: relatório ---- */
+  const rs=$('r_st').value,rl=$('r_lj').value;
+  const R=L.filter(l=>(rs==='risco'?l.s<=3:(!rs||String(l.s)===rs))&&(!rl||l.loja===rl));
+  $('r_tit').textContent=`Relatório CVL · ${dbr(ref())} · ${rl||'todas as filiais'} · ${R.length} lotes`;
+  $('t_rel').tBodies[0].innerHTML=R.length?R.map(l=>`<tr>
+    <td><b>${esc(l.sku)}</b></td><td>${esc(l.desc)}</td><td>${esc(l.lote)}</td>
+    <td>${dbr(l.val)}</td><td>${l.d>9000?'—':l.d}</td><td>${INT(l.qtd)}</td>
+    <td>${esc(l.loja)}</td><td>${esc(l.loc||'—')}</td><td>${tag(l.s)}</td>
+    <td>${acao(l)}</td><td style="width:60px">(&nbsp;&nbsp;)</td></tr>`).join('')
+    :'<tr><td colspan="11" class="mut">Nada a imprimir.</td></tr>';
+  const tR=totais(R);
+  $('t_rel').tFoot.innerHTML=R.length?`<tr>
+    <td colspan="5">${INT(tR.n)} lote(s) · ${INT(tR.skus)} SKU(s) distintos</td>
+    <td>${INT(tR.un)}</td><td colspan="5">unidades</td></tr>`:'';
+}
+
+/* ---------- import ---------- */
+const pick=(r,ks)=>{for(const k of ks){for(const kk in r){
+  if(kk.trim().toUpperCase()===k.toUpperCase())return r[kk]}}return undefined};
+const achaCB=r=>{
+  for(const k in r){
+    const K=k.trim().toUpperCase().replace(/[.\s_]/g,'');
+    if(/BARRA|^EAN|GTIN|CODAUX/.test(K))return r[k];
+  }
+  return '';
+};
+function importar(rows){
+  const novos=[];
+  rows.forEach(r=>{
+    const sku=String(pick(r,['SKU','CODIGO','CÓDIGO','COD','CODPROD','ITEM'])??'').trim();
+    const desc=String(pick(r,['DESCRICAO','DESCRIÇÃO','PRODUTO','NOME'])??'').trim();
+    if(!sku||!desc)return;
+    novos.push({sku,desc,mc:String(pick(r,['MARCA','FABRICANTE'])??'').trim(),
+      cb:String(achaCB(r)??'').trim(),
+      f1:NUM(pick(r,['Estoque F1','EstoqueF1','F1'])),
+      f2:NUM(pick(r,['Estoque F2','EstoqueF2','F2'])),
+      f3:NUM(pick(r,['Estoque F3','EstoqueF3','F3'])),
+      fl:String(pick(r,['FORALINHA2','FORALINHA','FORA LINHA'])??'N')
+        .trim().toUpperCase().startsWith('S')?'S':'N'})});
+  if(!novos.length)return flash($('m0'),'Nenhuma linha válida encontrada. Verifique as colunas SKU e DESCRIÇÃO.',false);
+  let add=0,upd=0;
+  if($('i_mode').value==='repl'){base=novos;add=novos.length}
+  else{novos.forEach(n=>{const o=idx.get(n.sku.toUpperCase());
+    if(o){if(!n.cb)delete n.cb;Object.assign(o,n);upd++}else{base.push(n);add++}})}
+  reidx();saveBase();render();
+  const nc=temCB();
+  flash($('m0'),`Importação concluída: ${INT(add)} novos, ${INT(upd)} atualizados · `
+    +`${INT(nc)} com código de barras`
+    +(nc?'.':' (a bipagem ficará indisponível; use SKU ou descrição).'),true);
+}
+function lerArquivo(f){
+  if(!f)return;
+  const csv=/\.csv$/i.test(f.name);
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      let dados=e.target.result,opt={type:'array'};
+      if(csv){
+        const bytes=new Uint8Array(dados);
+        let txt=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
+        if(/\uFFFD/.test(txt))txt=new TextDecoder('windows-1252').decode(bytes);
+        dados=txt;opt={type:'string'};
+      }
+      const wb=XLSX.read(dados,opt);
+      importar(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false}));
+    }catch(err){flash($('m0'),'Falha ao ler o arquivo: '+err.message,false)}
+  };
+  fr.readAsArrayBuffer(f);
+}
+
+/* ---------- autocomplete ---------- */
+function autoc(inp,cb){
+  const box=inp.parentNode;let ul=null,sel=-1,itens=[];
+  const close=()=>{if(ul){ul.remove();ul=null}sel=-1;itens=[]};
+  const marca=()=>ul&&[...ul.children].forEach((li,i)=>li.classList.toggle('sel',i===sel));
+  inp.addEventListener('input',()=>{
+    close();const q=inp.value.trim().toLowerCase();if(q.length<2)return;
+    itens=[];
+    for(const b of base){
+      if((b.sku+' '+b.desc+' '+(b.cb||'')).toLowerCase().includes(q)){
+        itens.push(b);if(itens.length>=20)break;
+      }
+    }
+    if(!itens.length)return;
+    ul=document.createElement('ul');
+    itens.forEach(b=>{const li=document.createElement('li');
+      li.innerHTML=`<b>${esc(b.sku)}</b><s>${esc(b.desc)}${b.mc?' · '+esc(b.mc):''}${b.cb?' · '+esc(b.cb):''}</s>`;
+      li.onmousedown=()=>{inp.value=b.sku;close();cb&&cb(b)};ul.appendChild(li)});
+    box.appendChild(ul)});
+  inp.addEventListener('keydown',e=>{
+    if(!ul)return;
+    if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(sel+1,itens.length-1);marca()}
+    else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(sel-1,0);marca()}
+    else if(e.key==='Enter'&&sel>=0){e.preventDefault();
+      const b=itens[sel];inp.value=b.sku;close();cb&&cb(b)}
+    else if(e.key==='Escape')close()});
+  inp.addEventListener('blur',()=>setTimeout(close,150));
+}
+
+/* ---------- utilitários ---------- */
+function baixar(nome,conteudo,tipo){
+  const blob=new Blob([conteudo],{type:tipo});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+function armar(btn,fn){
+  let armado=false,t=null;const orig=btn.textContent;
+  btn.onclick=()=>{
+    if(!armado){armado=true;btn.textContent='Clique novamente para confirmar';
+      t=setTimeout(()=>{armado=false;btn.textContent=orig},4000);return}
+    clearTimeout(t);armado=false;btn.textContent=orig;fn()};
+}
+
+/* ---------- eventos ---------- */
+$('b_tema').onclick=()=>tema(!document.body.classList.contains('dark'));
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');$(b.dataset.p).classList.add('on')});
+
+document.querySelectorAll('#t_lotes th.srt').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k;
+  ord=(ord.k===k)?{k,dir:-ord.dir}:{k,dir:1};render()});
+
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>{lerArquivo(e.target.files[0]);e.target.value=''};
+['dragenter','dragover'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.add('hot')}));
+['dragleave','drop'].forEach(t=>$('drop').addEventListener(t,e=>{e.preventDefault();$('drop').classList.remove('hot')}));
+$('drop').addEventListener('drop',e=>lerArquivo(e.dataTransfer.files[0]));
+
+/* --- bipagem: atalho opcional --- */
+$('l_cb').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  const cod=$('l_cb').value.trim();$('l_cb').value='';
+  $('l_sku').value='';
+  if(!cod)return;
+  const achou=p=>{$('l_sku').value=p.sku;$('l_lote').focus()};
+  const p=porCB(cod);
+  if(p){achou(p);flash($('m1'),`✔ ${p.sku} · ${p.desc}`);return}
+  const ps=prod(cod);
+  if(ps){achou(ps);flash($('m1'),`✔ ${ps.sku} · ${ps.desc} (encontrado pelo SKU)`);return}
+  const alvo=base.filter(b=>(b.sku+' '+b.desc+' '+(b.cb||'')).toUpperCase().includes(cod.toUpperCase()));
+  if(alvo.length===1){achou(alvo[0]);
+    flash($('m1'),`✔ ${alvo[0].sku} · ${alvo[0].desc} (correspondência parcial)`);return}
+  flash($('m1'),`Código ${cod} não localizado`
+    +(alvo.length?` — ${alvo.length} produtos parecidos, use a busca abaixo.`
+      :temCB()?'. Digite o SKU ou a descrição no campo abaixo.'
+      :'. A base não tem códigos de barras — use SKU ou descrição.'),false);
+  $('l_sku').focus();
+});
+
+$('b_lote').onclick=()=>{
+  const sku=$('l_sku').value.trim(),lote=$('l_lote').value.trim(),
+        val=$('l_val').value,qtd=NUM($('l_qtd').value);
+  if(!sku||!lote||!val)return flash($('m1'),'Informe SKU, lote e validade.',false);
+  if(qtd<=0)return flash($('m1'),'Quantidade deve ser maior que zero.',false);
+  const dup=lotes.find(l=>String(l.sku).toUpperCase()===sku.toUpperCase()&&
+    String(l.lote).toUpperCase()===lote.toUpperCase()&&l.loja===$('l_loja').value);
+  if(dup){dup.qtd=qtd;dup.val=val;dup.loc=$('l_loc').value.trim();dup.dt=hoje();
+    saveLotes();render();flash($('m1'),`Lote ${lote} atualizado.`);return}
+  lotes.push({id:seq++,sku,lote,val,qtd,loja:$('l_loja').value,
+    loc:$('l_loc').value.trim(),dt:hoje()});
+  saveLotes();render();
+  flash($('m1'),`Lote ${lote} adicionado.`);
+  ['l_cb','l_sku','l_lote','l_val','l_qtd','l_loc'].forEach(i=>$(i).value='');
+  $('l_info').textContent='';$('l_cb').focus();
+};
+$('b_limpa').onclick=()=>{['l_cb','l_sku','l_lote','l_val','l_qtd','l_loc'].forEach(i=>$(i).value='');
+  $('l_info').textContent='';$('l_cb').focus()};
+
+$('b_cad').onclick=()=>{
+  const sku=$('c_sku').value.trim(),desc=$('c_desc').value.trim();
+  if(!sku||!desc)return flash($('m3'),'SKU e descrição são obrigatórios.',false);
+  const o=prod(sku);let msg;
+  if(o){Object.assign(o,{desc,mc:$('c_mc').value.trim(),cb:$('c_cb').value.trim(),fl:$('c_fl').value});
+    msg=`SKU ${sku} atualizado.`}
+  else{base.push({sku,desc,mc:$('c_mc').value.trim(),cb:$('c_cb').value.trim(),
+    f1:0,f2:0,f3:0,fl:$('c_fl').value});msg=`SKU ${sku} cadastrado.`}
+  reidx();saveBase();render();
+  flash($('m3'),msg);['c_sku','c_desc','c_mc','c_cb'].forEach(i=>$(i).value='');
+};
+function editP(sku){const p=prod(sku);if(!p)return;
+  $('c_sku').value=p.sku;$('c_desc').value=p.desc;$('c_mc').value=p.mc||'';
+  $('c_cb').value=p.cb||'';$('c_fl').value=p.fl||'N';
+  $('c_desc').focus();flash($('m3'),`Editando ${p.sku}.`)}
+
+$('b_json').onclick=()=>baixar(`cvl_backup_${ref()}.json`,
+  JSON.stringify({ver:APP.ver,base:pack(base,B_COLS),lotes:pack(lotes,L_COLS),
+    cols:{b:B_COLS,l:L_COLS}}),'application/json');
+$('b_rest').onclick=()=>$('fjson').click();
+$('fjson').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  const fr=new FileReader();fr.onload=ev=>{try{
+    const d=JSON.parse(ev.target.result);
+    const rb=d.base||[],rl=d.lotes||[];
+    base=Array.isArray(rb[0])?unpack(rb,(d.cols&&d.cols.b)||B_COLS):rb;
+    lotes=Array.isArray(rl[0])?unpack(rl,(d.cols&&d.cols.l)||L_COLS):rl;
+    seq=1;normaliza();saveBase();saveLotes();render();
+    flash($('m1'),`Backup restaurado: ${INT(base.length)} produtos, ${INT(lotes.length)} lotes.`)}
+    catch(err){flash($('m1'),'JSON inválido: '+err.message,false)}};
+  fr.readAsText(f);e.target.value=''};
+$('b_csv').onclick=()=>{
+  const L=ordena(calc());
+  const csv=['SKU;Descricao;Marca;Lote;Validade;Dias;Qtd;Filial;Local;Status;Acao;Lancado em']
+    .concat(L.map(l=>[l.sku,l.desc,l.mc,l.lote,dbr(l.val),l.d,l.qtd,l.loja,l.loc||'',SN[l.s],
+      (l.s===1?'RETIRAR':l.fefo?'SAIR 1º':''),dbr(l.dt)]
+      .map(v=>String(v).replace(/;/g,',')).join(';'))).join('\r\n');
+  baixar(`cvl_lotes_${ref()}.csv`,'\ufeff'+csv,'text/csv;charset=utf-8')};
+
+$('b_expbase').onclick=()=>{
+  const B=baseFiltrada();
+  const csv=['SKU;Descricao;Marca;COD. BARRAS;Estoque F1;Estoque F2;Estoque F3;FORALINHA']
+    .concat(B.map(b=>[b.sku,b.desc,b.mc||'',b.cb||'',b.f1||0,b.f2||0,b.f3||0,b.fl||'N']
+      .map(v=>String(v).replace(/;/g,',')).join(';'))).join('\r\n');
+  baixar(`cvl_base_${ref()}.csv`,'\ufeff'+csv,'text/csv;charset=utf-8');
+  flash($('m3'),`${INT(B.length)} produtos exportados em CSV.`)};
+$('b_expxls').onclick=()=>{
+  const B=baseFiltrada().map(b=>({SKU:b.sku,'DESCRIÇÃO':b.desc,MARCA:b.mc||'',
+    'COD. BARRAS':b.cb||'','Estoque F1':b.f1||0,'Estoque F2':b.f2||0,
+    'Estoque F3':b.f3||0,FORALINHA:b.fl||'N'}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(B),'Base');
+  XLSX.writeFile(wb,`cvl_base_${ref()}.xlsx`);
+  flash($('m3'),`${INT(B.length)} produtos exportados em XLSX.`)};
+
+armar($('b_zap'),()=>{lotes=[];saveLotes();render();flash($('m1'),'Lotes apagados.')});
+armar($('b_zapbase'),()=>{base=[];reidx();saveBase();render();flash($('m3'),'Base apagada.')});
+
+['f_st','f_lj','f_q','b_q','r_st','r_lj','dref','h_per','h_q'].forEach(i=>{
+  $(i).addEventListener('input',render);$(i).addEventListener('change',render)});
+
+autoc($('q_sku'),p=>mostra(p.sku));
+$('q_sku').addEventListener('change',()=>mostra($('q_sku').value.trim()));
+function mostra(chave){
+  if(!chave)return $('q_out').innerHTML='';
+  const p=prod(chave)||porCB(chave);
+  if(!p)return $('q_out').innerHTML='<div class="mut">Produto não encontrado na base.</div>';
+  const L=calc().filter(l=>String(l.sku).toUpperCase()===String(p.sku).toUpperCase());
+  const t=totais(L);
+  $('q_out').innerHTML=`
+    <div class="row"><div class="pill">${esc(p.sku)} · ${esc(p.desc)}</div>
+      <div class="pill">Marca: ${esc(p.mc||'—')}</div>
+      <div class="pill">Cód. barras: ${esc(p.cb||'—')}</div>
+      <div class="pill">F1: ${INT(p.f1)}</div><div class="pill">F2: ${INT(p.f2)}</div>
+      <div class="pill">F3: ${INT(p.f3)}</div>
+      <div class="pill">Fora de linha: ${p.fl==='S'?'Sim':'Não'}</div>
+      <div class="pill">Lotes: ${t.n} · ${INT(t.un)} un</div></div>
+    <div class="wrap" style="margin-top:14px"><table>
+      <thead><tr><th>Lote</th><th>Validade</th><th>Dias</th><th>Qtd</th><th>Filial</th>
+      <th>Local</th><th>Status</th><th>Ação</th><th>Lançado em</th></tr></thead>
+      <tbody>${L.length?L.map(l=>`<tr><td>${esc(l.lote)}</td><td>${dbr(l.val)}</td>
+        <td>${l.d>9000?'—':l.d}</td><td>${INT(l.qtd)}</td><td>${esc(l.loja)}</td>
+        <td>${esc(l.loc||'—')}</td><td>${tag(l.s)}</td><td>${acao(l)}</td>
+        <td>${dbr(l.dt)}</td></tr>`).join('')
+        :'<tr><td colspan="9" class="mut">Sem lotes lançados.</td></tr>'}</tbody></table></div>`;
+}
+
+$('l_val').addEventListener('input',()=>{const v=$('l_val').value;
+  $('l_info').textContent=v?`Faltam ${dias(v)} dia(s) · classificação: ${SN[stat(dias(v))]}`:''});
+
+(function init(){
+  let td=null;try{td=localStorage.getItem(KT)}catch(e){}
+  tema(td!==null?td==='1':matchMedia('(prefers-color-scheme:dark)').matches);
+  $('dref').value=hoje();
+  const opts=LOJAS.map(l=>`<option>${l}</option>`).join('');
+  $('loja').innerHTML=opts;$('l_loja').innerHTML=opts;
+  $('f_lj').innerHTML='<option value="">Todas</option>'+opts;
+  $('r_lj').innerHTML='<option value="">Todas</option>'+opts;
+  $('loja').onchange=()=>{$('l_loja').value=$('loja').value};
+  document.title=`${APP.nome} · ${APP.desc}`;
+  $('fl1').textContent=`© ${APP.ano} ${APP.autor}`;
+  $('fl2').textContent=`${APP.nome} v${APP.ver} · ${APP.rev} · elaborado e desenvolvido por ${APP.autor} · © ${APP.ano}`;
+  $('fl3').textContent=`© ${APP.ano} ${APP.autor} · ${APP.nome} v${APP.ver} (${APP.rev}) · controle interno ${APP.reg} · build ${APP.build}`;
+  autoc($('l_sku'));render();
+  if(navigator.storage&&navigator.storage.persist)
+    navigator.storage.persist().then(p=>{$('p_mem')._p=p;mostraMem()}).catch(()=>{});
+  load().then(()=>{render();mostraMem();$('l_cb').focus()})
+    .catch(e=>flash($('m0'),'Falha ao carregar os dados: '+e.message,false));
+})();
+</script>
+</body>
+</html>
